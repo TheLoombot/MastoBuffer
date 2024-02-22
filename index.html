@@ -1,0 +1,273 @@
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mastodon Integration</title>
+    </head>
+    <body>
+        <h1>Mastodon Integration</h1>
+        <div id="profileSection">
+            <h2>Profile Information</h2>
+            <div id="profile"></div>
+        </div>
+        <div id="newPostSection">
+            <h2>Schedule a New Post</h2>
+            <form id="newPostForm">
+                <label for="tootText">Toot Text:</label>
+                <input type="text" id="tootText" name="tootText" required><br><br>
+                <label for="image">Image:</label>
+                <input type="file" id="image" name="image" accept="image/*"><br><br>
+                <label for="altText">Alt Text for Image:</label>
+                <input type="text" id="altText" name="altText"><br><br>
+                <input id="submit-button" type="submit" value="Schedule Post">
+            </form>
+        </div>
+        <div id="scheduledPostsSection">
+            <h2>Scheduled Posts</h2>
+            <ul id="scheduledPosts"></ul>
+        </div>
+
+        <script>
+            // const accessToken = 'PFT2CIKSOGULtTusuNgs6koQQHn1_hImY12-SCE8CMA';
+            // const instanceUrl = 'https://mastodon.replacementhipster.com';
+
+            const accessToken = 'aXQdtKo-UeQbu5ypD2VdWXRD05M3-Pct13_Y7-cFoX4';
+            const instanceUrl = 'https://botsin.space';
+
+
+            async function fetchProfile() {
+                try {
+                    const response = await fetch(`${instanceUrl}/api/v1/accounts/verify_credentials`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    displayProfile(data);
+                } catch (error) {
+                    console.error('Error fetching Mastodon profile:', error);
+                    document.getElementById('profile').innerHTML = '<p>Error fetching profile.</p>';
+                }
+            }
+
+            function displayProfile(profile) {
+                const profileHtml = `
+                <p><strong>Username:</strong> ${profile.username}</p>
+                <p><strong>Followers:</strong> ${profile.followers_count}</p>
+                <p><strong>Statuses:</strong> ${profile.statuses_count}</p>
+                <img src="${profile.avatar}" alt="Profile avatar" style="max-width: 100px;">
+                `;
+
+                // <p><strong>Full Name:</strong> ${profile.display_name}</p>
+                // <p><strong>Following:</strong> ${profile.following_count}</p>
+
+                document.getElementById('profile').innerHTML = profileHtml;
+            }
+
+            // The rest of your functions (fetchScheduledPosts, uploadMedia, createScheduledPost, scheduleNewPost) remain the same
+            // Ensure to include them here as in the previous example
+
+            async function fetchScheduledPosts() {
+                try {
+                    const response = await fetch(`${instanceUrl}/api/v1/scheduled_statuses`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    console.log(data);
+                    displayScheduledPosts(data);
+                } catch (error) {
+                    console.error('Error fetching scheduled posts:', error);
+                }
+            }
+
+            function displayScheduledPosts(posts) {
+                const list = document.getElementById('scheduledPosts');
+                list.innerHTML = ''; // Clear current list
+                if (posts && posts.length > 0) {
+                    posts.forEach(post => {
+                        console.log(post)
+                        const listItem = document.createElement('li');
+                        let content = "";
+
+                        // Check if there are attached images and append them to the content
+                        if (post.media_attachments && post.media_attachments.length > 0) {
+                            console.log(post.media_attachments);
+                            post.media_attachments.forEach(media => {
+                                // Assuming 'url' is the key where the image URL is stored; adjust based on actual response structure
+                                content += `<img src="${media.url}" alt="${media.description || 'Attached image'}" style="max-width: 200px; display: block;">`;
+                                content += `Alt text: ${media.description} <br />`
+                            });
+                        }
+
+                        content += `Text: ${post.params.text} <br /> Scheduled at: ${new Date(post.scheduled_at).toLocaleString()} <br />`;
+
+                        listItem.innerHTML = content;
+
+                        // Create a delete button
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.onclick = function() { deletePost(post.id); }; // Assuming 'post.id' uniquely identifies the post
+
+                        // Append the delete button to the list item
+                        listItem.appendChild(deleteButton);
+
+                        list.appendChild(listItem);
+                    });
+                } else {
+                    list.innerHTML = '<li>No scheduled posts found.</li>';
+                }
+            }
+
+            async function deletePost(postId) {
+                try {
+                    const response = await fetch(`${instanceUrl}/api/v1/scheduled_statuses/${postId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    console.log('Post deleted successfully');
+
+                    // Optionally, refresh the list of posts after deletion
+                    fetchScheduledPosts();
+                } catch (error) {
+                    console.error('Error deleting post:', error);
+                }
+            }
+
+            async function uploadMedia(imageFile) {
+                const formData = new FormData();
+                formData.append('file', imageFile);
+
+                try {
+                    const response = await fetch(`${instanceUrl}/api/v2/media`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    return await response.json(); // Return the full response object
+                } catch (error) {
+                    console.error('Error uploading media:', error);
+                    return null;
+                }
+            }
+
+            async function setMediaDescription(mediaId, description) {
+                try {
+                    const response = await fetch(`${instanceUrl}/api/v1/media/${mediaId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json',
+                        },
+                body: JSON.stringify({ description: description }) // Set the alt text
+            });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    console.log('Media description set successfully');
+                } catch (error) {
+                    console.error('Error setting media description:', error);
+                }
+            }
+
+
+            async function createScheduledPost(tootText, mediaId, scheduledAt) {
+                const payload = {
+                    status: tootText,
+                    media_ids: mediaId ? [mediaId] : [], // Attach the media by ID
+                    scheduled_at: scheduledAt // ISO8601 string for scheduling
+                };
+
+                console.log(JSON.stringify({status: tootText}));
+
+                try {
+                    const response = await fetch(`${instanceUrl}/api/v1/statuses`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${accessToken}`,
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    console.log('Post scheduled successfully');
+                    console.log(response);
+                    fetchScheduledPosts(); // Refresh the list of scheduled posts
+                } catch (error) {
+                    console.error('Error scheduling post:', error);
+                }
+            }
+
+            async function scheduleNewPost(event) {
+                event.preventDefault();
+
+                const submitButton = document.getElementById('submit-button'); 
+                submitButton.disabled = true;
+
+                const tootText = document.getElementById('tootText').value;
+                const imageFile = document.getElementById('image').files[0];
+                const altText = document.getElementById('altText').value;
+
+                let mediaId = null;
+                if (imageFile) {
+                    mediaInfo = await uploadMedia(imageFile);
+                    if (mediaInfo && mediaInfo.id) {
+                        mediaId = mediaInfo.id;
+                        await setMediaDescription(mediaId, altText);
+                    }
+                }
+
+                let scheduledAt = new Date();
+                scheduledAt.setMinutes(scheduledAt.getMinutes() + 30); // Schedule 5 minutes into the future
+
+                console.log(scheduledAt);
+
+                await createScheduledPost(tootText, mediaId, scheduledAt.toISOString());
+                document.getElementById('newPostForm').reset();
+                submitButton.disabled = false;
+            }
+
+
+
+            document.getElementById('newPostForm').addEventListener('submit', scheduleNewPost);
+
+            // Fetch profile information and scheduled posts on page load
+            fetchProfile();
+            fetchScheduledPosts();
+        </script>
+    </body>
+    </html>
