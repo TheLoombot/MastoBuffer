@@ -35,7 +35,6 @@
             const accessToken = 'aXQdtKo-UeQbu5ypD2VdWXRD05M3-Pct13_Y7-cFoX4';
             const instanceUrl = 'https://botsin.space';
 
-
             async function fetchProfile() {
                 try {
                     const response = await fetch(`${instanceUrl}/api/v1/accounts/verify_credentials`, {
@@ -71,9 +70,6 @@
                 document.getElementById('profile').innerHTML = profileHtml;
             }
 
-            // The rest of your functions (fetchScheduledPosts, uploadMedia, createScheduledPost, scheduleNewPost) remain the same
-            // Ensure to include them here as in the previous example
-
             async function fetchScheduledPosts() {
                 try {
                     const response = await fetch(`${instanceUrl}/api/v1/scheduled_statuses`, {
@@ -104,11 +100,9 @@
                         const listItem = document.createElement('li');
                         let content = "";
 
-                        // Check if there are attached images and append them to the content
                         if (post.media_attachments && post.media_attachments.length > 0) {
                             console.log(post.media_attachments);
                             post.media_attachments.forEach(media => {
-                                // Assuming 'url' is the key where the image URL is stored; adjust based on actual response structure
                                 content += `<img src="${media.url}" alt="${media.description || 'Attached image'}" style="max-width: 200px; display: block;">`;
                                 content += `Alt text: ${media.description} <br />`
                             });
@@ -118,12 +112,10 @@
 
                         listItem.innerHTML = content;
 
-                        // Create a delete button
                         const deleteButton = document.createElement('button');
                         deleteButton.textContent = 'Delete';
-                        deleteButton.onclick = function() { deletePost(post.id); }; // Assuming 'post.id' uniquely identifies the post
+                        deleteButton.onclick = function() { deletePost(post.id); }; 
 
-                        // Append the delete button to the list item
                         listItem.appendChild(deleteButton);
 
                         list.appendChild(listItem);
@@ -148,7 +140,6 @@
 
                     console.log('Post deleted successfully');
 
-                    // Optionally, refresh the list of posts after deletion
                     fetchScheduledPosts();
                 } catch (error) {
                     console.error('Error deleting post:', error);
@@ -252,7 +243,7 @@
                 }
 
                 let scheduledAt = new Date();
-                scheduledAt.setMinutes(scheduledAt.getMinutes() + 30); // Schedule 5 minutes into the future
+                scheduledAt.setMinutes(scheduledAt.getMinutes() + 30); // Schedule x minutes into the future
 
                 console.log(scheduledAt);
 
