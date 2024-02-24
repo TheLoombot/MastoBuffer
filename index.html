@@ -255,7 +255,6 @@
                         }
                     }
 
-
                     const lastScheduledPostTime = allScheduledPosts.length ? allScheduledPosts[allScheduledPosts.length - 1].scheduled_at : null;
 
                     console.log("last post time: " + lastScheduledPostTime);
@@ -281,7 +280,7 @@
             }
 
             function calculateNextScheduledTime(lastScheduledPostTime) {
-                const nextScheduledTime = new Date();
+                nextScheduledTime = new Date();
 
                 if (!lastScheduledPostTime) {
                     // If no posts are currently scheduled, schedule for the next 10AM
@@ -292,8 +291,8 @@
                     nextScheduledTime.setHours(10, 0, 0, 0); // Set time to 10AM
                 } else {
                     // If there are scheduled posts, schedule this for 10AM the day after the last scheduled post
-                    const lastPostDate = new Date(lastScheduledPostTime);
-                    nextScheduledTime.setDate(lastPostDate.getDate() + 1); // Move to the next day
+                    nextScheduledTime = new Date(lastScheduledPostTime);
+                    nextScheduledTime.setDate(nextScheduledTime.getDate() + 1); // Move to the next day
                     nextScheduledTime.setHours(10, 0, 0, 0); // Set time to 10AM
                 }
 
