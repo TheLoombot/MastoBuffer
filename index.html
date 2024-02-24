@@ -78,7 +78,7 @@
 
             async function fetchScheduledPosts() {
                 try {
-                    const response = await fetch(`${instanceUrl}/api/v1/scheduled_statuses`, {
+                    const response = await fetch(`${instanceUrl}/api/v1/scheduled_statuses?limit=40`, {
                         method: 'GET',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
@@ -107,8 +107,10 @@
             function displayScheduledPosts(posts) {
                 const list = document.getElementById('scheduledPosts');
                 list.innerHTML = ''; // Clear current list
+                i = 0;
                 if (posts && posts.length > 0) {
                     posts.forEach(post => {
+                        i++
                         const listItem = document.createElement('li');
                         let content = "";
 
@@ -120,6 +122,7 @@
                         }
 
                         content += `Text: ${post.params.text} <br /> Scheduled at: ${new Date(post.scheduled_at).toLocaleString()} <br />`;
+                        content += `${i} <br />`
 
                         listItem.innerHTML = content;
 
