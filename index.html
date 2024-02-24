@@ -16,8 +16,12 @@
             <form id="newPostForm">
                 <label for="tootText">Toot Text:</label>
                 <input type="text" id="tootText" name="tootText" required><br><br>
-                <label for="image">Image:</label>
-                <input type="file" id="image" name="image" accept="image/*"><br><br>
+                <div id="drop-area" style="border: 2px dashed #ccc; padding: 20px; width: 300px; text-align: center;">
+                    Drag and drop an image here
+                </div>
+                <input type="file" id="image" name="image" accept="image/*" style="display: none;">
+                <div id="preview" style="margin-top: 20px;"></div>
+
                 <label for="altText">Alt Text for Image:</label>
                 <input type="text" id="altText" name="altText"><br><br>
                 <input id="submit-button" type="submit" value="Schedule Post">
@@ -34,6 +38,7 @@
 
             const accessToken = 'aXQdtKo-UeQbu5ypD2VdWXRD05M3-Pct13_Y7-cFoX4';
             const instanceUrl = 'https://botsin.space';
+            let droppedFiles = []; 
 
             async function fetchProfile() {
                 try {
@@ -230,27 +235,81 @@
                 submitButton.disabled = true;
 
                 const tootText = document.getElementById('tootText').value;
-                const imageFile = document.getElementById('image').files[0];
+                // const imageFile = document.getElementById('image').files[0];
                 const altText = document.getElementById('altText').value;
 
-                let mediaId = null;
-                if (imageFile) {
-                    mediaInfo = await uploadMedia(imageFile);
-                    if (mediaInfo && mediaInfo.id) {
-                        mediaId = mediaInfo.id;
-                        await setMediaDescription(mediaId, altText);
+                try {
+                    let mediaId = null;
+                    // Determine which files to use: droppedFiles or those selected via file input
+                    const filesToUpload = droppedFiles.length > 0 ? droppedFiles : []
+
+                    if (filesToUpload.length > 0) {
+                        const file = filesToUpload[0]; // Assuming only one file for simplicity
+                        const uploadResult = await uploadMedia(file);
+                        if (uploadResult && uploadResult.id) {
+                            mediaId = uploadResult.id;
+                            await setMediaDescription(mediaId, altText);
+                        }
                     }
+
+                    let scheduledAt = new Date();
+                    scheduledAt.setMinutes(scheduledAt.getMinutes() + 30);
+
+                    console.log(scheduledAt);
+
+                    await createScheduledPost(tootText, mediaId, scheduledAt.toISOString());
+
+                    // Clear the form and reset droppedFiles for the next submission
+                    document.getElementById('newPostForm').reset();
+                    droppedFiles = []; // Reset the dropped files
+                    document.getElementById('preview').innerHTML = ''; // Clear the preview
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    // Handle any errors
+                } finally {
+                    submitButton.disabled = false; // Re-enable the submit button
                 }
 
-                let scheduledAt = new Date();
-                scheduledAt.setMinutes(scheduledAt.getMinutes() + 30); // Schedule x minutes into the future
-
-                console.log(scheduledAt);
-
-                await createScheduledPost(tootText, mediaId, scheduledAt.toISOString());
-                document.getElementById('newPostForm').reset();
-                submitButton.disabled = false;
             }
+
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const dropArea = document.getElementById('drop-area');
+
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropArea.addEventListener(eventName, preventDefaults, false);
+                });
+
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+
+                dropArea.addEventListener('drop', handleDrop, false);
+
+                function handleDrop(e) {
+                    const dt = e.dataTransfer;
+                    droppedFiles = dt.files;
+
+                    handleFiles(droppedFiles);
+                }
+
+                function handleFiles(files) {
+                    ([...files]).forEach(previewFile);
+                }
+
+                function previewFile(file) {
+                    const reader = new FileReader();
+                    reader.readAsDataURL(file);
+                    reader.onloadend = function() {
+                        const img = document.createElement('img');
+                        img.src = reader.result;
+                        img.style.maxWidth = '200px'; 
+                        document.getElementById('preview').appendChild(img);
+                    };
+                }
+            });
 
 
 
