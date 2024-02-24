@@ -256,7 +256,8 @@
                     }
 
 
-                    const lastScheduledPostTime = allScheduledPosts.length ? allScheduledPosts.pop().scheduled_at : null
+                    const lastScheduledPostTime = allScheduledPosts.length ? allScheduledPosts[allScheduledPosts.length - 1].scheduled_at : null;
+
                     console.log("last post time: " + lastScheduledPostTime);
 
                     let scheduledAt = calculateNextScheduledTime(lastScheduledPostTime);
