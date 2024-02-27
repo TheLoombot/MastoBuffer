@@ -24,6 +24,9 @@
 
                 <label for="altText">Alt Text for Image:</label>
                 <input type="text" id="altText" name="altText"><br><br>
+                <label for="scheduledDateTime">Scheduled Date & Time:</label>
+                <input type="datetime-local" id="scheduledDateTime" name="scheduledDateTime">
+                <br><br>
                 <input id="submit-button" type="submit" value="Schedule Post">
             </form>
         </div>
@@ -39,7 +42,6 @@
             const accessToken = 'aXQdtKo-UeQbu5ypD2VdWXRD05M3-Pct13_Y7-cFoX4';
             const instanceUrl = 'https://botsin.space';
             let droppedFiles = []; 
-            let allScheduledPosts = [];
 
             async function fetchProfile() {
                 try {
@@ -77,6 +79,9 @@
             }
 
             async function fetchScheduledPosts() {
+
+                let allScheduledPosts = [];
+
                 try {
                     const response = await fetch(`${instanceUrl}/api/v1/scheduled_statuses?limit=40`, {
                         method: 'GET',
@@ -98,7 +103,18 @@
                         return dateA - dateB;
                     });
 
-                    displayScheduledPosts(data);
+                    const lastScheduledPostTime = allScheduledPosts.length ? allScheduledPosts[allScheduledPosts.length - 1].scheduled_at : null;
+
+                    // Calculate the default date and time for the next scheduled post
+                    const defaultDateTime = calculateDefaultDateTime(lastScheduledPostTime); 
+                    
+                    // Format the date and time as YYYY-MM-DDTHH:MM
+                    const formattedDateTime = formatDateTimeLocal(defaultDateTime);
+                    
+                    // Set the default value of the date and time picker
+                    document.getElementById('scheduledDateTime').value = formattedDateTime;
+
+                    displayScheduledPosts(allScheduledPosts);
                 } catch (error) {
                     console.error('Error fetching scheduled posts:', error);
                 }
@@ -243,6 +259,7 @@
                 const tootText = document.getElementById('tootText').value;
                 // const imageFile = document.getElementById('image').files[0];
                 const altText = document.getElementById('altText').value;
+                let scheduledAt = document.getElementById('scheduledDateTime').value;
 
                 try {
                     let mediaId = null;
@@ -258,15 +275,10 @@
                         }
                     }
 
-                    const lastScheduledPostTime = allScheduledPosts.length ? allScheduledPosts[allScheduledPosts.length - 1].scheduled_at : null;
+                    // The input datetime-local input doesn't know the timezone so we add it here
+                    scheduledAt += '-05:00'
 
-                    console.log("last post time: " + lastScheduledPostTime);
-
-                    let scheduledAt = calculateNextScheduledTime(lastScheduledPostTime);
-
-                    console.log("next post time: " + scheduledAt);
-
-                    await createScheduledPost(tootText, mediaId, scheduledAt.toISOString());
+                    await createScheduledPost(tootText, mediaId, scheduledAt);
 
                     // Clear the form and reset droppedFiles for the next submission
                     document.getElementById('newPostForm').reset();
@@ -282,7 +294,7 @@
 
             }
 
-            function calculateNextScheduledTime(lastScheduledPostTime) {
+            function calculateDefaultDateTime(lastScheduledPostTime) {
                 nextScheduledTime = new Date();
 
                 if (!lastScheduledPostTime) {
@@ -300,6 +312,15 @@
                 }
 
                 return nextScheduledTime;
+            }
+
+            function formatDateTimeLocal(date) {
+                // Format date to YYYY-MM-DD
+                const datePart = date.toISOString().split('T')[0];
+                // Format time to HH:MM
+                const timePart = date.toTimeString().split(' ')[0].substring(0, 5);
+                // Combine and return
+                return `${datePart}T${timePart}`;
             }
 
             document.addEventListener('DOMContentLoaded', function () {
@@ -337,9 +358,8 @@
                         document.getElementById('preview').appendChild(img);
                     };
                 }
+
             });
-
-
 
             document.getElementById('newPostForm').addEventListener('submit', scheduleNewPost);
 
