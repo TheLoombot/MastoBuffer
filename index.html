@@ -181,7 +181,7 @@
                 formData.append('file', imageFile);
 
                 try {
-                    const response = await fetch(`${instanceUrl}/api/v2/media`, {
+                    const uploadResponse = await fetch(`${instanceUrl}/api/v2/media`, {
                         method: 'POST',
                         headers: {
                             'Authorization': `Bearer ${accessToken}`
@@ -189,16 +189,51 @@
                         body: formData
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                    if (uploadResponse.status === 202) { // Accepted but not processed
+                        console.log('Media upload accepted but processing is pending.');
+                        const media = await uploadResponse.json();
+                        return await checkMediaProcessing(media.id); // Check if media is processed
+                    } else if (!uploadResponse.ok) {
+                        throw new Error(`HTTP error! status: ${uploadResponse.status}`);
                     }
 
-                    return await response.json(); // Return the full response object
+                    return await uploadResponse.json(); // Return the full response object for 200 OK
                 } catch (error) {
                     console.error('Error uploading media:', error);
                     return null;
                 }
             }
+
+            async function checkMediaProcessing(mediaId, attempt = 0) {
+                if (attempt >= 5) { // Give up after 5 attempts
+                    console.log('Giving up on media processing after 5 attempts.');
+                    throw new Error('Media processing timeout');
+                }
+
+                try {
+                    console.log(`Checking media processing status for media ID ${mediaId}, attempt ${attempt + 1}.`);
+                    const checkResponse = await fetch(`${instanceUrl}/api/v1/media/${mediaId}`, {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`
+                        }
+                    });
+
+                    if (checkResponse.status === 200) { // Processed
+                        console.log(`Media ID ${mediaId} is processed.`);
+                        return await checkResponse.json();
+                    } else if (checkResponse.status === 206) { // Still processing
+                        await new Promise(resolve => setTimeout(resolve, 5000)); // Wait for 5 seconds
+                        return await checkMediaProcessing(mediaId, attempt + 1); // Retry
+                    } else {
+                        throw new Error(`HTTP error! status: ${checkResponse.status}`);
+                    }
+                } catch (error) {
+                    console.error(`Error checking media processing for media ID ${mediaId}:`, error);
+                    return null;
+                }
+            }
+
 
             async function setMediaDescription(mediaId, description) {
                 try {
